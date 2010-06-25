@@ -1,0 +1,13 @@
+<a id="foo" href="/une/url/ajax/" title="Un title for the popup">Open a popup
+
+$('#foo').popup()
+
+or 
+
+$('#foo').popup({
+
+	title: 'Another title',
+	type: 'confirm',
+	dataType: 'JSON'	
+
+})
