@@ -1,4 +1,4 @@
-<a id="foo" href="/une/url/ajax/" title="Un title for the popup">Open a popup
+<a id="foo" href="/une/url/ajax/" title="Un title for the popup">Open a popup</a>
 
 $('#foo').popup()
 
