@@ -128,7 +128,6 @@
         			}
         			else if(o.dataType == 'json' && typeof o.data != 'object') {
         				o.dataType = "html";
-        				alert(o.data)
         			}
         			
         			switch( o.dataType ) {        			
@@ -147,7 +146,7 @@
         		}
         	});
         }   
-        else if(o.content && o.beforeOpen(o)) { $.fn.popup.preload(o); $.fn.popup.load(o); }
+        else if(o.content && o.beforeOpen(o)) { $.fn.popup.preload(o); }
         else if (!o.content) $.fn.popup.close(null, o);
     	return this;
     };
@@ -162,21 +161,17 @@
     };
     
     $.fn.popup.load = function(o, loading, popup, old, pos) {
-
     	$.fn.popup.lock = false;
-    	if(loading) o.content = '';
-    	
+    	if(loading) o.content = '';    	
     	old = o.popup;
-    	popup = $.fn.popup.construct(o);   	
-    	
-    	if(!popup.length) return o.self.popup();  
-    	
+    	popup = $.fn.popup.construct(o);     	
+    	if(!popup.length) return o.self.popup();      	
     	var overflow = $.fn.popup.overflow(o, popup);
     	if(loading) overflow.css(o.loading); 
     	
     	// Popup append (is ready)
     	popup.addClass('ba3bff91d5c461fa22da2e9c83fd3ba9').css({ height:$.ie6?"1%":"auto",position:'absolute',left:0, top:-99999, zIndex:60000000 + o.popups.length +1 }).appendTo("body")[0].popup = o;
-    	pos = $.fn.popup.position(o, popup, loading);    
+    	pos = $.fn.popup.position(o, popup, loading);   
     	
     	if(old && !loading) {
     		old.stop(true, true).animate({ top: pos.top }, 350, function() {     			
@@ -207,12 +202,13 @@
     	if(!loading) $.fn.popup.opened(o);    	
     };
     $.fn.popup.construct = function(o) {
-    	if(o.type != 'none' && $.fn.popup_types[o.type] ) {    		
-    		var content = $.fn.popup_types[o.type];    		
-    		for(opt in o) content=content.replace('%'+opt, o[opt]);  		
-    		return $(content);    		
-    	}
-    	else return $(o.content);
+    	if(o.type == 'none') return $(o.content);
+    	else if( $.fn.popup_types[o.type] ) var content = $.fn.popup_types[o.type]; 
+    	else var content = o.type;
+    	for(opt in o) content=content.replace('%'+opt, o[opt]);
+    	var jcontent = $(content);
+    	if(jcontent.length) return jcontent;
+    	else return $('<div>'+content+'</div>'); 
     }
     $.fn.popup.correct = function(o) {
     	if(!o.popupIsClosed) {
