@@ -1,116 +1,46 @@
-(function($){	
+(function($){  
 	
-	$.fn.popup_types = {
-		'default': 
-'<div id="%id" class="popup %class" style="margin: auto; width: %width; position:relative;">\
-	<div id="popup-title">\
-		<div>\
-			<a class="close" id="popup-close" onclick="jQuery(this).popup(false);"></a>\
-		</div>\
-    </div>\
-    <div id="popup-center" class="popup-overflow">\
-    	<h2>%title</h2>\
-		%content\
-    </div>\
-    <div id="popup-bottom"><div></div></div>\
-</div>',
-					    
-		'confirm':  
-'<div id="%id" class="popup %class" style="margin: auto; width: %width; position:relative;">\
-	<div id="popup-title">\
-    </div>\
-    <div id="popup-center" class="popup-overflow">\
-    	<h2>%title</h2>\
-		%content\
-    </div>\
-    <a id="" onclick="jQuery(this).popup(\'ok\');">%okTitle</a>\
-    <a id="" onclick="jQuery(this).popup(\'cancel\');">%cancelTitle</a>\
-    <div id="popup-bottom"><div></div></div>\
-</div>',
-					    
-		'alert':  
-'<div id="%id" class="popup %class" style="margin: auto; width: %width; position:relative;">\
-	<div id="popup-title">\
-    </div>\
-    <div id="popup-center" class="popup-overflow">\
-    	<h2>%title</h2>\
-		%content\
-		<a onclick="jQuery(this).popup(\'ok\');"><input class="cancel"  value="%okTitle" type="button"/></a>\
-    </div>\
-    <div id="popup-bottom"><div></div></div>\
-</div>'
-					   
-	};
-
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	    
-	    
-	
-    
-
-	$.fn.popup = function(o) 
-    {
-    	if( $.fn.popup.lock ) return this; $.fn.popup.lock = true;
+	$.fn.popup = function(o, type) 
+    {    	
     	if( o === false ) return $.fn.popup.close(this);
     	if( typeof o == "string" ) {  
     		if( o == "close" ) return $.fn.popup.close(this);
-    		else if( o == "cancel" || o == "ok") {
-    			var opt = $.fn.popup.retrieve(this); 
-    			if (opt) opt[o](opt);
-    			return false;
-    		}
+    		else if( o == "cancel" || o == "ok") { var opt = $.fn.popup.retrieve(this); if(opt) opt[o](opt); return false; }
+    		else if( type ) { $.fn.popup.types[o] = type; return this; }
     	}
-    	  	
-		o=$.extend({			
+    	if( $.fn.popup.lock ) return this; $.fn.popup.lock = true;   	
+    	
+    	o = $.fn.popup.define({			
 			overlay:		{ opacity:0.6, background: '#000' },
-			loading:		{ height: 150, background: 'url(/images/css/base/31.gif) no-repeat center center white' },
+			loading:		{ height: 100, background: 'url(/images/css/base/31.gif) no-repeat center center white' },
 			scroll:			false,
-			overflow: 		".popup-overflow",
+			template:		'',
+			overflow: 		'.popup-overflow',
 			type: 			'default',
 			dataType:		'html',
-			title:			'',
 			width:			$.support.boxModel?'542px':'auto',
 			position:		false,
 			effect:			'fade', //'slide',
 			content: 		null,
 			marginBottom: 	10,	
-			cancelTitle:	'Cancel',
-			cancel:			function(o) { $.fn.popup.close(this, o); },
-			okTitle:		'OK',
-			ok:				function(o) { $.fn.popup.close(this, o); },			
+			cancelTrigger:	'a.cancel',
+			cancel:			function(o) { $.fn.popup.close(this, o); },			
+			okTrigger:		'a.ok',
+			ok:				function(o) { $.fn.popup.close(this, o); },	
+			closeTrigger:	'a.close',
 			beforeClose:	function(o) { return true; },
 			afterClose: 	function(o) {},
 			beforeOpen: 	function(o) { return true; },
 			afterOpen: 		function(o) {},
 			url: 			this.attr('href'),
-			title: 			this.attr('title')
+			title: 			this.attr('title')		
 		}, o, {			
-			popups:			$('.ba3bff91d5c461fa22da2e9c83fd3ba9'),
 			self: 			this,
 			popup: 			null,			
 			minHeight:		$.support.boxModel?"1%":"auto"
-		});		
-
-        if( o.url && !o.content ) {	
-        	
+		});
+		o.popups = $($.fn.popup.metaclass);
+        if( o.url && !o.content ) {	        	
         	$.ajax({
         		url: o.url, type: 'GET', dataType: o.dataType,
         		beforeSend: function(xhr) { 
@@ -147,11 +77,29 @@
         	});
         }   
         else if(o.content && o.beforeOpen(o)) { $.fn.popup.preload(o); }
-        else if (!o.content) $.fn.popup.close(null, o);
+        else if (!o.content) {
+        	if(o.self.length) {
+        		o.content = $('<div>').append( o.self.eq(0).clone() ).html();
+        	}
+        	else $.fn.popup.close(null, o);
+        }
+        
     	return this;
     };
+    $.fn.popup.types = {};
+    $.fn.popup.meta = 'ba3bff91d5c461fa22da2e9c83fd3ba9';
+    $.fn.popup.metaclass = '.'+$.fn.popup.meta;
+    $.fn.popup.define = function(defaults, o, extra) {
+    	if(!o) o={};
+    	var model = ( o.type ? ( $.fn.popup.types[o.type] ? $.fn.popup.types[o.type] : o.type ) : $.fn.popup.types[defaults.type] );
+    	if(typeof model == 'object') {
+			if(model.length >= 1) o.template = model[0];
+			if(model.length > 1 && typeof model[1] == "object") defaults = $.extend(defaults, model[1]);			
+		}
+    	else if(typeof model == 'string') o.template = model;
+    	return $.extend(defaults, o, extra);
+    };
     $.fn.popup.preload = function(o, loading) {
-
     	if(!$.fn.popup.ovr ) 
         	$.fn.popup.ovr  = $("<div id='popup-overlay'>").css({
         	position: $.browser.msie?'absolute':'fixed', width: '100%', height: $.ie6?$(window).height():"100%", top:0, left:0
@@ -160,27 +108,28 @@
         $.fn.popup.load(o, loading);
     };
     
-    $.fn.popup.load = function(o, loading, popup, old, pos) {
+    $.fn.popup.load = function(o, loading, popup, pos) {
     	$.fn.popup.lock = false;
     	if(loading) o.content = '';    	
-    	old = o.popup;
+    	if(!o.loader) o.loader = o.popup;
     	popup = $.fn.popup.construct(o);     	
     	if(!popup.length) return o.self.popup();      	
     	var overflow = $.fn.popup.overflow(o, popup);
     	if(loading) overflow.css(o.loading); 
     	
     	// Popup append (is ready)
-    	popup.addClass('ba3bff91d5c461fa22da2e9c83fd3ba9').css({ height:$.ie6?"1%":"auto",position:'absolute',left:0, top:-99999, zIndex:60000000 + o.popups.length +1 }).appendTo("body")[0].popup = o;
+    	popup.addClass($.fn.popup.meta).css({ height:$.ie6?"1%":"auto",position:'absolute',left:0, top:-99999, zIndex:60000000 + o.popups.length + (o.loader ? 2 : 1) }).appendTo("body")[0].popup = o;
+    	popup.find(o.closeTrigger).bind('click', function(){ $.fn.popup.close(this, o); return false; });
     	pos = $.fn.popup.position(o, popup, loading);   
     	
-    	if(old && !loading) {
-    		old.stop(true, true).animate({ top: pos.top }, 350, function() {     			
+    	if(o.loader && !loading) {
+    		o.loader.stop(true, true).animate({ top: pos.top }, 350, function() {     			
     			popup.stop().css({ opacity: 0, left: pos.left, top: pos.top }).animate({ opacity : 1 }, 200, function() { 
-    				old.remove(); 
+    				if(o.loader) { popup.css({ opacity : '' }); o.loader.remove(); o.loader = null; }    				
     				if(!o.position) o.timeout = setTimeout(function() { $.fn.popup.correct(o); }, 1400);
     			}); 
     		});
-    		$.fn.popup.overflow(o, old).stop(true, true).animate({ height: pos.height }, 350);
+    		$.fn.popup.overflow(o, o.loader).stop(true, true).animate({ height: pos.height }, 350);
     	}
     	else {
     		switch(o.effect) {        	
@@ -196,24 +145,22 @@
     		popup.css(css).animate(anime, 200, function() {
     			if(!o.position) o.timeout = setTimeout(function() { $.fn.popup.correct(o); }, 1400);
     		});
-    		
     	}    	
     	o.popup = popup;
     	if(!loading) $.fn.popup.opened(o);    	
     };
     $.fn.popup.construct = function(o) {
-    	if(o.type == 'none') return $(o.content);
-    	else if( $.fn.popup_types[o.type] ) var content = $.fn.popup_types[o.type]; 
-    	else var content = o.type;
+    	var content = o.template; 
     	for(opt in o) content=content.replace('%'+opt, o[opt]);
     	var jcontent = $(content);
     	if(jcontent.length) return jcontent;
     	else return $('<div>'+content+'</div>'); 
     }
     $.fn.popup.correct = function(o) {
+    	if(o.loader) { popup.css({ opacity : '' }); o.loader.remove(); o.loader = null; }
     	if(!o.popupIsClosed) {
 	    	pos = $.fn.popup.position(o, o.popup); 
-	    	o.popup.stop(true, true).animate({ left: pos.left, top: pos.top }, 100);
+	    	o.popup.stop(true).animate({ left: pos.left, top: pos.top }, 100);
 	    	o.timeout = setTimeout(function() { $.fn.popup.correct(o); }, 110);
     	}
     }
@@ -270,18 +217,19 @@
     	self=$(self);
     	if(!o) {
     		o = self[0].popup;
-			if(!o) o = self.parents('.ba3bff91d5c461fa22da2e9c83fd3ba9');
-			if(!o) o = $('.ba3bff91d5c461fa22da2e9c83fd3ba9');
+			if(!o) o = self.parents($.fn.popup.metaclass);
+			if(!o) o = $($.fn.popup.metaclass);
 			o = o.length && o[0].popup ? o[0].popup : null;
+			if(o && !o.popup) o.popup = $($.fn.popup.metaclass);
     	}
     	return o;
     };
-    $.fn.popup.close = function(self, o) {    	
-    	
+    $.fn.popup.close = function(self, o) {   	
     	o = $.fn.popup.retrieve(self, o); 		
 		if(o && o.beforeClose(o)) {
+			if(o.loader) o.loader.remove();
 			o.popupIsClosed=true;
-			o.popups = $('.ba3bff91d5c461fa22da2e9c83fd3ba9');	
+			o.popups = $($.fn.popup.metaclass);
     		clearTimeout(o.timeout); 
     		switch(o.effect) {        	
 	    		case 'slide': var anime = { top: -self.height()-10 }; break;
@@ -297,5 +245,32 @@
 		}
 		return self;    	
     };
+    
+    $.fn.popup('default', 
+	['<div id="%id" class="popup %class" style="margin: auto; width: %width; position:relative;">\
+		<div id="popup-title"><div><a class="close"></a></div></div>\
+	    <div id="popup-center" class="popup-overflow"><h2>%title</h2>%content</div>\
+	    <div id="popup-bottom"><div></div></div>\
+	</div>', {
+		    
+	}]);
+	   					    
+	$.fn.popup('confirm', 
+	['<div id="%id" class="popup %class" style="margin: auto; width: %width; position:relative;">\
+		<div id="popup-title"><div><a class="close"></a></div></div>\
+	    <div id="popup-center" class="popup-overflow"><h2>%title</h2>%content</div>\
+	    <div id="popup-bottom"><div></div></div>\
+	</div>', {
+		    
+	}]);
+	   					    
+	$.fn.popup('alert', 
+	['<div id="%id" class="popup %class" style="margin: auto; width: %width; position:relative;">\
+		<div id="popup-title"><div><a class="close"></a></div></div>\
+	    <div id="popup-center" class="popup-overflow"><h2>%title</h2>%content</div>\
+	    <div id="popup-bottom"><div><input class="ok" value="OK" type="button"/></div></div>\
+	</div>', {
+			    
+	}]);
 
 })(jQuery);
