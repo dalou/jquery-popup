@@ -2,6 +2,7 @@
 	
 	$.fn.popup = function(o, type, extra) 
     {    	
+		console.log(this);
     	if( o === false ) return $.fn.popup.close(this);
     	if( typeof o == "string" ) {  
     		if( o == "close" ) return $.fn.popup.close(this);
@@ -9,6 +10,8 @@
     		else if( type ) { $.fn.popup.types[o] = type; $.fn.popup.extra[o] = extra; return this; }
     	}
     	if( $.fn.popup.lock ) return this; $.fn.popup.lock = true;	
+    			
+		
     	
     	o = $.fn.popup.define({			
 			overlay:		{ opacity:0.6, background: '#000' },
@@ -24,12 +27,13 @@
 			effect:			'fade', //'slide',
 			content: 		null,
 			marginBottom: 	10,	
-			cancelTrigger:	'a.cancel',
+			cancelTrigger:	'a.popup-cancel',
 			cancel:			function(o) { $.fn.popup.close(this, o); },			
-			okTrigger:		'a.ok',
+			okTrigger:		'a.popup-ok',
 			ok:				function(o) { $.fn.popup.close(this, o); },	
-			closeTrigger:	'a.close',
+			closeTrigger:	'a.popup-close',
 			beforeClose:	function(o) { return true; },
+			beforeLoad:		function(o) {},
 			afterClose: 	function(o) {},
 			beforeOpen: 	function(o) { return true; },
 			afterOpen: 		function(o) {},
@@ -41,6 +45,7 @@
 			minHeight:		$.support.boxModel?"1%":"auto"
 		});
 		o.popups = $($.fn.popup.metaclass);
+		
         if( o.url && !o.content ) {	        	
         	$.ajax({
         		url: o.url, type: 'GET', dataType: o.dataType,
@@ -78,8 +83,11 @@
         	});
         }   
         else if(o.content && o.beforeOpen(o)) { $.fn.popup.preload(o); }
-        else if (!o.content) {
-        	if(o.self.length) o.content = $('<div>').append( o.self.eq(0).clone() ).html();
+        else if (!o.content) {       
+        	if(o.self.length) {        		
+        		o.content = $('<div>').append( o.self.eq(0).clone() ).html();
+        		$.fn.popup.preload(o);
+        	}
         	else $.fn.popup.close(null, o);
         }        
     	return this;
@@ -104,7 +112,7 @@
         	position: $.browser.msie?'absolute':'fixed', width: '100%', height: $.ie6?$(window).height():"100%", top:0, left:0
         }).appendTo("body");
         $.fn.popup.ovr.show().css(o.overlay).css({ zIndex: 60000000 + o.popups.length + 1 });       
-        $.fn.popup.load(o, loading);
+        $.fn.popup.load(o, loading);       
     };
     
     $.fn.popup.load = function(o, loading, popup, pos) {
@@ -125,9 +133,11 @@
     	
     	if(o.loader && !loading) {
     		o.loader.stop(true, true).animate({ top: pos.top }, o.duration, function() {     			
-    			popup.stop().css({ opacity: 0, left: pos.left, top: pos.top }).animate({ opacity : 1 }, o.duration-150, function() { 
+    			popup.stop().css({ opacity: 0, left: pos.left, top: pos.top }).stop(true, true).animate({ opacity : 1 }, o.duration-150, function() { 
+    				
     				if(o.loader) { popup.css({ opacity : '' }); o.loader.remove(); o.loader = null; }    				
     				if(!o.position) o.timeout = setTimeout(function() { $.fn.popup.correct(o, popup); }, o.duration+1050);
+    				if(!loading) $.fn.popup.opened(o); 
     			}); 
     		});
     		$.fn.popup.overflow(o, o.loader).stop(true, true).animate({ height: pos.height }, o.duration);
@@ -143,12 +153,14 @@
 	    	        var anime = { opacity : 1 };
 	    		break;        		
 	    	}
-    		popup.css(css).animate(anime, o.duration-150, function() {
+    		popup.css(css).stop(true, true).animate(anime, o.duration-150, function() {
+    			o.beforeLoad(o);
+    			if(!loading) $.fn.popup.opened(o); 
     			if(!o.position) o.timeout = setTimeout(function() { $.fn.popup.correct(o); }, o.duration+1050);
     		});
     	}    	
     	o.popup = popup;
-    	if(!loading) $.fn.popup.opened(o);    	
+    	   	
     };
     $.fn.popup.construct = function(o) {
     	var content = o.template; 
@@ -243,9 +255,9 @@
     
 	$.fn.popup('default', 
 	'<div id="%id" class="popup %class" style="margin: auto; width: %width; position:relative;">\
-		<div id="popup-title"><div><a class="close"></a></div></div>\
-	    <div id="popup-center" class="popup-overflow"><h2>%title</h2>%content</div>\
-	    <div id="popup-bottom"><div></div></div>\
+		<div class="popup-title"><a class="popup-close">x</a><h2>%title</h2></div>\
+	    <div class="popup-content popup-overflow">%content</div>\
+	    <div class="popup-bottom"></div>\
 	</div>', { });
 
 })(jQuery);
