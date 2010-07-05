@@ -2,16 +2,13 @@
 	
 	$.fn.popup = function(o, type, extra) 
     {    	
-		console.log(this);
     	if( o === false ) return $.fn.popup.close(this);
     	if( typeof o == "string" ) {  
     		if( o == "close" ) return $.fn.popup.close(this);
     		else if( o == "cancel" || o == "ok") { var opt = $.fn.popup.retrieve(this); if(opt) opt[o](opt); return false; }
     		else if( type ) { $.fn.popup.types[o] = type; $.fn.popup.extra[o] = extra; return this; }
     	}
-    	if( $.fn.popup.lock ) return this; $.fn.popup.lock = true;	
-    			
-		
+    	if( $.fn.popup.lock ) return this; $.fn.popup.lock = true;			
     	
     	o = $.fn.popup.define({			
 			overlay:		{ opacity:0.6, background: '#000' },
@@ -38,7 +35,7 @@
 			beforeOpen: 	function(o) { return true; },
 			afterOpen: 		function(o) {},
 			url: 			this.attr('href'),
-			title: 			this.attr('title')		
+			title: 			this.attr('title')	
 		}, o, {			
 			self: 			this,
 			popup: 			null,			
@@ -132,7 +129,7 @@
     	pos = $.fn.popup.position(o, popup, loading);   
     	
     	if(o.loader && !loading) {
-    		o.loader.stop(true, true).animate({ top: pos.top }, o.duration, function() {     			
+    		o.loader.stop(true, true).animate({ top: pos.top, left: pos.left, width: pos.width }, o.duration, function() {     			
     			popup.stop().css({ opacity: 0, left: pos.left, top: pos.top }).stop(true, true).animate({ opacity : 1 }, o.duration-150, function() { 
     				
     				if(o.loader) { popup.css({ opacity : '' }); o.loader.remove(); o.loader = null; }    				
@@ -218,7 +215,7 @@
 	        var nl = Math.max( o.marginBottom*2, (w_w-p_w) / 2 );
 	        var nt = Math.max( o.marginBottom*2, (w_h-p_h) / 2) + w_s;
         }
-        return { left: nl, top: nt, height: p_h-dec };
+        return { left: nl, top: nt, height: p_h-dec, width: p_w };
     };
     $.fn.popup.retrieve = function(self, o) { 
     	self=$(self);
@@ -239,7 +236,7 @@
 			o.popups = $($.fn.popup.metaclass);
     		clearTimeout(o.timeout); 
     		switch(o.effect) {        	
-	    		case 'slide': var anime = { top: -self.height()-10 }; break;
+	    		case 'slide': var anime = { top: -o.self.height()-10 }; break;
 	    		case 'fade' : default : var anime = { opacity: 0 }; break;
 	    	}
     		o.popup.stop(true, true).animate(anime, 150, function() {
