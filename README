@@ -1,13 +1,1 @@
-<a id="foo" href="/une/url/ajax/" title="Un title for the popup">Open a popup</a>
-
-$('#foo').popup()
-
-or 
-
-$('#foo').popup({
-
-	title: 'Another title',
-	type: 'confirm',
-	dataType: 'JSON'	
-
-})
+go http://www.versatile-dev.com/jquery.popup.php
