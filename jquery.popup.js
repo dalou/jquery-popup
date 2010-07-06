@@ -143,14 +143,14 @@
     	loader = o.popup;
     	popup = $.fn.popup.construct(o);
     	if(loader) {
-    		loader.stop(true, true).animate({ top: o.p.top, left: o.p.left, width: o.p.width }, o.duration, function() {     			
+    		loader.stop(true, true).animate({ top: o.p.top, left: o.p.left }, o.duration, function() {     			
     			popup.css({ opacity: 0, left: o.p.left, top: o.p.top }).animate({ opacity : 1 }, o.duration-50, function() {     				
     				popup.css({ opacity : '' }); 
     				loader.remove();     				
     				$.fn.popup.opened(o); 
     			}); 
     		});
-    		$.fn.popup.overflow(o, loader).stop(true, true).animate({ height: o.p.height }, o.duration);
+    		$.fn.popup.overflow(o, loader).stop(true, true).animate({ height: o.p.overflow.height(), width: o.p.overflow.width() }, o.duration);
     	}
     	else $.fn.popup.comein(o, popup, function() { $.fn.popup.opened(o); });
     }    
@@ -177,7 +177,7 @@
     	//if(o.loader && popup) { popup.css({ opacity : '' }); o.loader.remove(); o.loader = null; }
     	if(!o.popupIsClosed) {
 	    	o.p = $.fn.popup.position(o, o.popup); 
-	    	//o.popup.stop(true).animate({ left: o.p.left, top: o.p.top }, 100);
+	    	o.popup.stop(true).animate({ left: o.p.left, top: o.p.top }, 100);
 	    	o.timeout = setTimeout(function() { $.fn.popup.correct(o); }, 110);
     	}
     }
@@ -194,6 +194,7 @@
     $.fn.popup.position = function(o, popup, loading) {
 
     	var overflow = $.fn.popup.overflow(o, popup);
+    	if(loading) overflow.css(loading);
     	var w_w = $(window).width();
     	var w_h = $(window).height();
     	var w_s = $.browser.msie?document.documentElement.scrollTop:window.pageYOffset;
@@ -208,7 +209,7 @@
         	f_h = p_h - dec;
         	overflow.css({ height: f_h });        	
         }
-        else overflow.css(loading ? loading : { height: 'auto' });  
+        else overflow.css(loading ? {} : { height: 'auto' });  
    	
         p_h = popup.height(); 
         
@@ -230,7 +231,7 @@
 	        var nl = Math.max( o.marginBottom*2, (w_w-p_w) / 2 );
 	        var nt = Math.max( o.marginBottom*2, (w_h-p_h) / 2) + w_s;
         }
-        return { left: nl, top: nt, height: p_h-dec, width: p_w, overflow: overflow };
+        return { left: nl, top: nt, height: p_h-dec, width: popup.width(), overflow: overflow };
     };
     $.fn.popup.retrieve = function(self, o) { 
     	self=$(self);
@@ -268,6 +269,8 @@
 		<div class="popup-title"><a class="popup-close">x</a><h2>%title</h2></div>\
 	    <div class="popup-content popup-overflow">%content</div>\
 	    <div class="popup-bottom"></div>\
-	</div>', { });
+	</div>', { 
+		width: 'auto'
+	});
 
 })(jQuery);
