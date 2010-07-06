@@ -42,7 +42,7 @@
 			minHeight:		$.support.boxModel?"1%":"auto"
 		});
 		o.popups = $($.fn.popup.metaclass);		
-		try { $.fn.popup.preload(o); } catch(e) { console.log(e); }       
+		$.fn.popup.preload(o);     
     	return this;
     };   
     
@@ -62,8 +62,8 @@
     	return $.extend(defaults, o, extra);
     };    
        
-	$.fn.popup.preload = function(o, loading) {
-		if(o.beforeOpen(o)) {
+	$.fn.popup.preload = function(o, loading, reoverlay) {
+		if(o.beforeOpen(o) || reoverlay) {
 			if(!$.fn.popup.ovr ) $.fn.popup.ovr  = $("<div id='popup-overlay'>").css({
 		    	position: $.browser.msie?'absolute':'fixed', width: '100%', height: $.ie6?$(window).height():"100%", top:0, left:0
 		    }).appendTo("body");
@@ -72,16 +72,17 @@
 		    	if(o.overlay == 'transparent') o.overlay = { opacity: 0 };
 		    	$.fn.popup.ovr.show().css(o.overlay).css({ zIndex: 60000000 + o.popups.length + 1 }); 
 		    }
-		    
-		    if( o.url && !o.content ) { o.content =''; $.fn.popup.load(o); } 
-		    else if( o.content ) $.fn.popup.open(o);
-		    else if (!o.content) {       
-		    	if(o.self.length) {        		
-		    		o.content = $('<div>').append( o.self.eq(0).clone() ).html();
-		    		$.fn.popup.open(o);
-		    	}
-		    	else $.fn.popup.close(null, o);
-		    }        
+		    if(!reoverlay) {
+				if( o.url && !o.content ) { o.content =''; $.fn.popup.load(o); } 
+				else if( o.content ) $.fn.popup.open(o);
+				else if (!o.content) {       
+					if(o.self.length) {        		
+						o.content = $('<div>').append( o.self.eq(0).clone() ).html();
+						$.fn.popup.open(o);
+					}
+					else $.fn.popup.close(null, o);
+				}     
+			}   
 		}   
     };
     
@@ -100,6 +101,7 @@
 					switch( o.dataType ) {        			
 		    			case 'json': 
 		    				if(o.data.redirect) { $.fn.popup.lock = false; document.location=o.data.redirect; return false; }
+		    				if(o.data.overlay) { $.fn.popup.preload(o, false, true); }
 		    				o = $.extend({}, o, o.data);  
 		    			break;
 		    			case 'html' : default : o.content = o.data; break;
@@ -159,7 +161,7 @@
     	var jcontent = $(content);    	
     	if(jcontent.length) o.popup = jcontent;
     	else o.popup = $('<div>'+content+'</div>');     	
-    	o.popup.addClass($.fn.popup.meta).css({ height:$.ie6?"1%":"auto",position:'absolute',left:0, top:-99999, zIndex:60000000 + o.popups.length + (o.loader ? 2 : 1) }).appendTo("body")[0].popup = o;
+    	o.popup.addClass(loading ? $.fn.popup.meta+'l' : $.fn.popup.meta).css({ height:$.ie6?"1%":"auto",position:'absolute',left:0, top:-99999, zIndex:60000000 + o.popups.length + (loading ? 2 : 1) }).appendTo("body")[0].popup = o;
     	o.popup.find(o.closeTrigger).click(function(){ $.fn.popup.close(this, o); return false; });
     	o.popup.find(o.okTrigger).click(function(){ o.ok(o); return false; });
     	o.popup.find(o.cancelTrigger).click(function(){ o.cancel(o); return false; });
@@ -235,7 +237,9 @@
     	if(!o) {
     		o = self[0].popup;
 			if(!o) o = self.parents($.fn.popup.metaclass);
+			if(!o) o = self.parents($.fn.popup.metaclass+'l');
 			if(!o) o = $($.fn.popup.metaclass);
+			if(!o) o = $($.fn.popup.metaclass+'l');
 			o = o.length && o[0].popup ? o[0].popup : null;
 			if(o && !o.popup) o.popup = $($.fn.popup.metaclass);
     	}
@@ -249,9 +253,9 @@
 			o.popups = $($.fn.popup.metaclass);
     		clearTimeout(o.timeout); 
     		$.fn.popup.comeout(o, o.popup, function() {
-    			$(this).remove();
+    			o.popup.remove();
     			if(!(o.popups.length - 1) && o.overlay) $.fn.popup.ovr.stop(true, true).animate({ opacity:0 }, 100, function(){ $.fn.popup.ovr.hide(); });
-				if(o.overlay) $.fn.popup.ovr.show().css({ zIndex: 60000000 + o.popups.length - 1 });
+				else if(o.overlay) $.fn.popup.ovr.show().css({ zIndex: 60000000 + o.popups.length - 1 });
 				o.afterClose(o);
     		})
     		$.fn.popup.lock = false;
@@ -260,7 +264,7 @@
     };
     
 	$.fn.popup('default', 
-	'<div id="%id" class="popup %classname">\
+	'<div id="%id" class="popup %classname" style="width:%width;">\
 		<div class="popup-title"><a class="popup-close">x</a><h2>%title</h2></div>\
 	    <div class="popup-content popup-overflow">%content</div>\
 	    <div class="popup-bottom"></div>\
