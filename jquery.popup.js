@@ -270,7 +270,8 @@
 	    <div class="popup-content popup-overflow">%content</div>\
 	    <div class="popup-bottom"></div>\
 	</div>', { 
-		width: 'auto'
+		width: 'auto',
+		loading: { height: 200 }
 	});
 
 })(jQuery);
