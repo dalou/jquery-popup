@@ -12,14 +12,13 @@
     	
     	o = $.fn.popup.define({			
 			overlay:		{ opacity:0.6, background: '#000' },
-			loading:		{ height: 100, background: 'white' },
+			loading:		false,
 			scroll:			false,
 			template:		'',
 			duration:		300,
 			overflow: 		'.popup-overflow',
 			type: 			'default',
 			dataType:		'html',
-			width:			$.support.boxModel?'542px':'auto',
 			position:		false,
 			effect:			'fade', //'slide',
 			content: 		null,
@@ -55,10 +54,11 @@
     	if(!o) o={};
 		var type = o.type  ? o.type : defaults.type;
     	if($.fn.popup.types[type]) {
-			o.template = $.fn.popup.types[type];
+			if(!o.template) o.template = $.fn.popup.types[type];
 			defaults = $.extend(defaults, $.fn.popup.extra[type]);			
 		}
-    	else if(typeof o.type == 'string') o.template = o.type;
+    	else if(typeof o.type == 'string' && !o.template) o.template = o.type;
+    	
     	return $.extend(defaults, o, extra);
     };    
        
@@ -67,7 +67,11 @@
 			if(!$.fn.popup.ovr ) $.fn.popup.ovr  = $("<div id='popup-overlay'>").css({
 		    	position: $.browser.msie?'absolute':'fixed', width: '100%', height: $.ie6?$(window).height():"100%", top:0, left:0
 		    }).appendTo("body");
-		    $.fn.popup.ovr.show().css(o.overlay).css({ zIndex: 60000000 + o.popups.length + 1 }); 
+		    if(!o.overlay) $.fn.popup.ovr.hide();	     
+		    else {
+		    	if(o.overlay == 'transparent') o.overlay = { opacity: 0 };
+		    	$.fn.popup.ovr.show().css(o.overlay).css({ zIndex: 60000000 + o.popups.length + 1 }); 
+		    }
 		    
 		    if( o.url && !o.content ) { o.content =''; $.fn.popup.load(o); } 
 		    else if( o.content ) $.fn.popup.open(o);
@@ -140,8 +144,7 @@
     		loader.stop(true, true).animate({ top: o.p.top, left: o.p.left, width: o.p.width }, o.duration, function() {     			
     			popup.css({ opacity: 0, left: o.p.left, top: o.p.top }).stop(true, true).animate({ opacity : 1 }, o.duration-50, function() {     				
     				popup.css({ opacity : '' }); 
-    				loader.remove();  				
-    				if(!o.position) o.timeout = setTimeout(function() { $.fn.popup.correct(o, popup); }, o.duration+1050);
+    				loader.remove();     				
     				$.fn.popup.opened(o); 
     			}); 
     		});
@@ -157,9 +160,10 @@
     	if(jcontent.length) o.popup = jcontent;
     	else o.popup = $('<div>'+content+'</div>');     	
     	o.popup.addClass($.fn.popup.meta).css({ height:$.ie6?"1%":"auto",position:'absolute',left:0, top:-99999, zIndex:60000000 + o.popups.length + (o.loader ? 2 : 1) }).appendTo("body")[0].popup = o;
-    	o.popup.find(o.closeTrigger).bind('click', function(){ $.fn.popup.close(this, o); return false; });
-    	o.popup.find(o.okTrigger).bind('click', function(){ o.ok(o); return false; });
-    	o.popup.find(o.cancelTrigger).bind('click', function(){ o.cancel(o); return false; });
+    	o.popup.find(o.closeTrigger).click(function(){ $.fn.popup.close(this, o); return false; });
+    	o.popup.find(o.okTrigger).click(function(){ o.ok(o); return false; });
+    	o.popup.find(o.cancelTrigger).click(function(){ o.cancel(o); return false; });
+    	if(o.selfClose) o.popup.click(function(){ $.fn.popup.close(null, o); return false; })
     	$.fn.popup.ovr.unbind('click').click(function() {
 	    	o.clickOut(o);
 	    	if(o.outClose) $.fn.popup.close(null, o);         	
@@ -175,7 +179,8 @@
 	    	o.timeout = setTimeout(function() { $.fn.popup.correct(o); }, 110);
     	}
     }
-    $.fn.popup.opened = function(o) {       	
+    $.fn.popup.opened = function(o) {
+    	if(!o.position) o.timeout = setTimeout(function() { $.fn.popup.correct(o, o.popup); }, o.duration+1050);     	
     	if(o.delay)setTimeout(function() { if(!o.popupIsClosed) $.fn.popup.close(null, o); }, o.delay);
     	o.afterOpen(o);
     }
@@ -206,11 +211,17 @@
         p_h = popup.height(); 
         
         if(o.position) {
-        	var nl = o.self.offset().left;
-	        var nt = o.self.offset().top - (p_h+parseInt(popup.css('paddingTop'))+parseInt(popup.css('paddingBottom')));
+       	
 	        if( typeof o.position == "object" ) {
-	        	nl = nl + o.position.dx;
-	        	nt = nt + o.position.dy;
+	        	if(!o.position.target || o.position.target == 'self' ) var target = o.self;
+			    else var target = $(o.position.target);
+			    if(!target.length) target = o.self;
+			    
+			    var nl = target.offset().left + o.position.x;
+	       		var nt = target.offset().top - (p_h+parseInt(popup.css('paddingTop'))+parseInt(popup.css('paddingBottom'))) + o.position.y;
+	        }
+	        else {
+	        	
 	        }
         }
         else {
@@ -239,8 +250,8 @@
     		clearTimeout(o.timeout); 
     		$.fn.popup.comeout(o, o.popup, function() {
     			$(this).remove();
-    			if(!(o.popups.length - 1)) $.fn.popup.ovr.stop(true, true).animate({ opacity:0 }, 100, function(){ $.fn.popup.ovr.hide(); });
-				$.fn.popup.ovr.show().css({ zIndex: 60000000 + o.popups.length - 1 });
+    			if(!(o.popups.length - 1) && o.overlay) $.fn.popup.ovr.stop(true, true).animate({ opacity:0 }, 100, function(){ $.fn.popup.ovr.hide(); });
+				if(o.overlay) $.fn.popup.ovr.show().css({ zIndex: 60000000 + o.popups.length - 1 });
 				o.afterClose(o);
     		})
     		$.fn.popup.lock = false;
@@ -249,7 +260,7 @@
     };
     
 	$.fn.popup('default', 
-	'<div id="%id" class="popup %class" style="margin: auto; width: %width; position:relative;">\
+	'<div id="%id" class="popup %classname">\
 		<div class="popup-title"><a class="popup-close">x</a><h2>%title</h2></div>\
 	    <div class="popup-content popup-overflow">%content</div>\
 	    <div class="popup-bottom"></div>\
