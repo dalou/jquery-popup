@@ -8,14 +8,14 @@
     		else if( o == "cancel" || o == "ok") { var opt = $.fn.popup.retrieve(this); if(opt) opt[o](opt); return false; }
     		else if( type ) { $.fn.popup.types[o] = type; $.fn.popup.extra[o] = extra; return this; }
     	}
-    	if( $.fn.popup.lock ) return this; $.fn.popup.lock = true;			
+    	//if( $.fn.popup.lock ) return this; $.fn.popup.lock = true;			
     	
     	o = $.fn.popup.define({			
 			overlay:		{ opacity:0.6, background: '#000' },
 			loading:		{ height: 100, background: 'white' },
 			scroll:			false,
 			template:		'',
-			duration:		350,
+			duration:		300,
 			overflow: 		'.popup-overflow',
 			type: 			'default',
 			dataType:		'html',
@@ -30,10 +30,11 @@
 			ok:				function(o) { $.fn.popup.close(this, o); },	
 			closeTrigger:	'a.popup-close',
 			beforeClose:	function(o) { return true; },
-			beforeLoad:		function(o) {},
+			beforeLoad:		function(o) { return true; },
 			afterClose: 	function(o) {},
 			beforeOpen: 	function(o) { return true; },
 			afterOpen: 		function(o) {},
+			clickOut: 		function(o) {},
 			url: 			this.attr('href'),
 			title: 			this.attr('title')	
 		}, o, {			
@@ -41,54 +42,11 @@
 			popup: 			null,			
 			minHeight:		$.support.boxModel?"1%":"auto"
 		});
-		o.popups = $($.fn.popup.metaclass);
-		
-        if( o.url && !o.content ) {	        	
-        	$.ajax({
-        		url: o.url, type: 'GET', dataType: o.dataType,
-        		beforeSend: function(xhr) { 
-        			if(o.beforeOpen(o, xhr)) {
-        				$.fn.popup.preload(o, o.loading);
-        				return true;
-        			}
-        			else { $.fn.popup.lock = false; return false };
-        		},        		
-        		success: function(data) { 
-        			o.data = data;  
-        			if( o.dataType == 'html' && o.data.charAt(0) == '{' ) {
-        				o.data = $.parseJSON(data);
-        				o.dataType = "json";
-        			}
-        			else if(o.dataType == 'json' && typeof o.data != 'object') {
-        				o.dataType = "html";
-        			}
-        			
-        			switch( o.dataType ) {        			
-	        			case 'json': 
-	        				if(o.data.redirect) { $.fn.popup.lock = false; document.location=o.data.redirect; return false; }
-	        				o = $.extend({}, o, o.data);  
-	        			break;
-	        			case 'html' : default : o.content = o.data; break;
-        			}
-        			$.fn.popup.load(o);
-        		},
-        		error: function(xhr, ajaxOptions, thrownError) {
-        			o.data = {};
-        			o.content = xhr.responseText;
-	        		$.fn.popup.load(o); 
-        		}
-        	});
-        }   
-        else if(o.content && o.beforeOpen(o)) { $.fn.popup.preload(o); }
-        else if (!o.content) {       
-        	if(o.self.length) {        		
-        		o.content = $('<div>').append( o.self.eq(0).clone() ).html();
-        		$.fn.popup.preload(o);
-        	}
-        	else $.fn.popup.close(null, o);
-        }        
+		o.popups = $($.fn.popup.metaclass);		
+		try { $.fn.popup.preload(o); } catch(e) { console.log(e); }       
     	return this;
-    };
+    };   
+    
     $.fn.popup.types = {};
     $.fn.popup.extra = {};
     $.fn.popup.meta = 'ba3bff91d5c461fa22da2e9c83fd3ba9';
@@ -102,69 +60,112 @@
 		}
     	else if(typeof o.type == 'string') o.template = o.type;
     	return $.extend(defaults, o, extra);
-    };
-    $.fn.popup.preload = function(o, loading) {
-    	if(!$.fn.popup.ovr ) 
-        	$.fn.popup.ovr  = $("<div id='popup-overlay'>").css({
-        	position: $.browser.msie?'absolute':'fixed', width: '100%', height: $.ie6?$(window).height():"100%", top:0, left:0
-        }).appendTo("body");
-        $.fn.popup.ovr.show().css(o.overlay).css({ zIndex: 60000000 + o.popups.length + 1 });       
-        $.fn.popup.load(o, loading);       
+    };    
+       
+	$.fn.popup.preload = function(o, loading) {
+		if(o.beforeOpen(o)) {
+			if(!$.fn.popup.ovr ) $.fn.popup.ovr  = $("<div id='popup-overlay'>").css({
+		    	position: $.browser.msie?'absolute':'fixed', width: '100%', height: $.ie6?$(window).height():"100%", top:0, left:0
+		    }).appendTo("body");
+		    $.fn.popup.ovr.show().css(o.overlay).css({ zIndex: 60000000 + o.popups.length + 1 }); 
+		    
+		    if( o.url && !o.content ) { o.content =''; $.fn.popup.load(o); } 
+		    else if( o.content ) $.fn.popup.open(o);
+		    else if (!o.content) {       
+		    	if(o.self.length) {        		
+		    		o.content = $('<div>').append( o.self.eq(0).clone() ).html();
+		    		$.fn.popup.open(o);
+		    	}
+		    	else $.fn.popup.close(null, o);
+		    }        
+		}   
     };
     
-    $.fn.popup.load = function(o, loading, popup, pos) {
-    	$.fn.popup.lock = false;
-    	if(loading) o.content = '';    	
-    	if(!o.loader) o.loader = o.popup;
-    	popup = $.fn.popup.construct(o);     	
-    	if(!popup.length) return o.self.popup();      	
-    	var overflow = $.fn.popup.overflow(o, popup);
-    	if(loading) overflow.css(o.loading); 
-    	
-    	// Popup append (is ready)
-    	popup.addClass($.fn.popup.meta).css({ height:$.ie6?"1%":"auto",position:'absolute',left:0, top:-99999, zIndex:60000000 + o.popups.length + (o.loader ? 2 : 1) }).appendTo("body")[0].popup = o;
-    	popup.find(o.closeTrigger).bind('click', function(){ $.fn.popup.close(this, o); return false; });
-    	popup.find(o.okTrigger).bind('click', function(){ o.ok(o); return false; });
-    	popup.find(o.cancelTrigger).bind('click', function(){ o.cancel(o); return false; });
-    	pos = $.fn.popup.position(o, popup, loading);   
-    	
-    	if(o.loader && !loading) {
-    		o.loader.stop(true, true).animate({ top: pos.top, left: pos.left, width: pos.width }, o.duration, function() {     			
-    			popup.stop().css({ opacity: 0, left: pos.left, top: pos.top }).stop(true, true).animate({ opacity : 1 }, o.duration-150, function() { 
-    				
-    				if(o.loader) { popup.css({ opacity : '' }); o.loader.remove(); o.loader = null; }    				
+    $.fn.popup.load = function(o) {
+    	$.fn.popup.comein(o, $.fn.popup.construct(o, o.loading), function() {  	
+			$.ajax({
+				url: o.url, type: 'GET', dataType: o.dataType,
+				beforeSend: function(xhr) { return o.beforeLoad(o, xhr) !== false; },        		
+				success: function(data) { 
+					o.data = data;  
+					if( o.dataType == 'html' && o.data.charAt(0) == '{' ) {
+						o.data = $.parseJSON(data);
+						o.dataType = "json";
+					}
+					else if(o.dataType == 'json' && typeof o.data != 'object') o.dataType = "html";				
+					switch( o.dataType ) {        			
+		    			case 'json': 
+		    				if(o.data.redirect) { $.fn.popup.lock = false; document.location=o.data.redirect; return false; }
+		    				o = $.extend({}, o, o.data);  
+		    			break;
+		    			case 'html' : default : o.content = o.data; break;
+					}
+					$.fn.popup.open(o);
+				},
+				error: function(xhr, ajaxOptions, thrownError) {
+					o.data = {};
+					o.content = xhr.responseText;
+		    		$.fn.popup.open(o); 
+				}
+			});
+		});
+    }; 
+    
+	$.fn.popup.comein = function(o, popup, callback) {				
+		switch(o.effect) {        	
+    		case 'slide':
+    			var css = { left: o.p.left, top: -o.p.height-210 };
+    			var anime = { left: o.p.left, top: o.p.top };
+	        break;
+    		case 'fade' : default :
+    			var css = { opacity: 0, left: o.p.left, top: o.p.top }
+    	        var anime = { opacity : 1 };
+    		break;        		
+    	}
+		popup.css(css).stop(true,  true).animate(anime, o.duration-50, callback);
+    }
+    
+    $.fn.popup.comeout = function(o, popup, callback) {	
+    	switch(o.effect) {        	
+    		case 'slide': var anime = { top: -o.p.height-210 }; break;
+    		case 'fade' : default : var anime = { opacity: 0 }; break;
+    	}
+		popup.stop(true, true).animate(anime, o.duration-150, callback);
+    }	
+    
+    $.fn.popup.open = function(o, loader, popup) {
+    	loader = o.popup;
+    	popup = $.fn.popup.construct(o);
+    	if(loader) {
+    		loader.stop(true, true).animate({ top: o.p.top, left: o.p.left, width: o.p.width }, o.duration, function() {     			
+    			popup.css({ opacity: 0, left: o.p.left, top: o.p.top }).stop(true, true).animate({ opacity : 1 }, o.duration-50, function() {     				
+    				popup.css({ opacity : '' }); 
+    				loader.remove();  				
     				if(!o.position) o.timeout = setTimeout(function() { $.fn.popup.correct(o, popup); }, o.duration+1050);
-    				if(!loading) $.fn.popup.opened(o); 
+    				$.fn.popup.opened(o); 
     			}); 
     		});
-    		$.fn.popup.overflow(o, o.loader).stop(true, true).animate({ height: pos.height }, o.duration);
+    		$.fn.popup.overflow(o, loader).stop(true, true).animate({ height: o.p.height }, o.duration);
     	}
-    	else {
-    		switch(o.effect) {        	
-	    		case 'slide':
-	    			var css = { left: pos.left, top: -pos.height-10 };
-	    			var anime = { left: pos.left, top: pos.top };
-		        break;
-	    		case 'fade' : default :
-	    			var css = { opacity: 0, left: pos.left, top: pos.top }
-	    	        var anime = { opacity : 1 };
-	    		break;        		
-	    	}
-    		popup.css(css).stop(true, true).animate(anime, o.duration-150, function() {
-    			o.beforeLoad(o);
-    			if(!loading) $.fn.popup.opened(o); 
-    			if(!o.position) o.timeout = setTimeout(function() { $.fn.popup.correct(o); }, o.duration+1050);
-    		});
-    	}    	
-    	o.popup = popup;
-    	   	
-    };
-    $.fn.popup.construct = function(o) {
+    	else $.fn.popup.comein(o, popup, function() { $.fn.popup.opened(o); });
+    }    
+
+    $.fn.popup.construct = function(o, loading) {    	
     	var content = o.template; 
     	for(opt in o) content=content.replace('%'+opt, o[opt]);
     	var jcontent = $(content);    	
-    	if(jcontent.length) return jcontent;
-    	else return $('<div>'+content+'</div>'); 
+    	if(jcontent.length) o.popup = jcontent;
+    	else o.popup = $('<div>'+content+'</div>');     	
+    	o.popup.addClass($.fn.popup.meta).css({ height:$.ie6?"1%":"auto",position:'absolute',left:0, top:-99999, zIndex:60000000 + o.popups.length + (o.loader ? 2 : 1) }).appendTo("body")[0].popup = o;
+    	o.popup.find(o.closeTrigger).bind('click', function(){ $.fn.popup.close(this, o); return false; });
+    	o.popup.find(o.okTrigger).bind('click', function(){ o.ok(o); return false; });
+    	o.popup.find(o.cancelTrigger).bind('click', function(){ o.cancel(o); return false; });
+    	$.fn.popup.ovr.unbind('click').click(function() {
+	    	o.clickOut(o);
+	    	if(o.outClose) $.fn.popup.close(null, o);         	
+	    });
+    	o.p = $.fn.popup.position(o, o.popup, loading);    	
+    	return o.popup;
     }
     $.fn.popup.correct = function(o, popup) {
     	if(o.loader && popup) { popup.css({ opacity : '' }); o.loader.remove(); o.loader = null; }
@@ -200,7 +201,8 @@
         	f_h = p_h - dec;
         	overflow.css({ height: f_h });        	
         }
-        else overflow.css(loading ? {}:{ height: 'auto' });        	
+        else overflow.css(loading ? loading : { height: 'auto' });  
+   	
         p_h = popup.height(); 
         
         if(o.position) {
@@ -215,7 +217,7 @@
 	        var nl = Math.max( o.marginBottom*2, (w_w-p_w) / 2 );
 	        var nt = Math.max( o.marginBottom*2, (w_h-p_h) / 2) + w_s;
         }
-        return { left: nl, top: nt, height: p_h-dec, width: p_w };
+        return { left: nl, top: nt, height: p_h-dec, width: p_w, overflow: overflow };
     };
     $.fn.popup.retrieve = function(self, o) { 
     	self=$(self);
@@ -235,16 +237,12 @@
 			o.popupIsClosed=true;
 			o.popups = $($.fn.popup.metaclass);
     		clearTimeout(o.timeout); 
-    		switch(o.effect) {        	
-	    		case 'slide': var anime = { top: -o.self.height()-10 }; break;
-	    		case 'fade' : default : var anime = { opacity: 0 }; break;
-	    	}
-    		o.popup.stop(true, true).animate(anime, 150, function() {
+    		$.fn.popup.comeout(o, o.popup, function() {
     			$(this).remove();
-    			if(!(o.popups.length - 1)) $.fn.popup.ovr.animate({ opacity:0 }, 100, function(){ $.fn.popup.ovr.hide(); });
+    			if(!(o.popups.length - 1)) $.fn.popup.ovr.stop(true, true).animate({ opacity:0 }, 100, function(){ $.fn.popup.ovr.hide(); });
 				$.fn.popup.ovr.show().css({ zIndex: 60000000 + o.popups.length - 1 });
 				o.afterClose(o);
-    		});
+    		})
     		$.fn.popup.lock = false;
 		}
 		return self;    	
