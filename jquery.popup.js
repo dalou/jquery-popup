@@ -144,7 +144,7 @@
     	popup = $.fn.popup.construct(o);
     	if(loader) {
     		loader.stop(true, true).animate({ top: o.p.top, left: o.p.left, width: o.p.width }, o.duration, function() {     			
-    			popup.css({ opacity: 0, left: o.p.left, top: o.p.top }).stop(true, true).animate({ opacity : 1 }, o.duration-50, function() {     				
+    			popup.css({ opacity: 0, left: o.p.left, top: o.p.top }).animate({ opacity : 1 }, o.duration-50, function() {     				
     				popup.css({ opacity : '' }); 
     				loader.remove();     				
     				$.fn.popup.opened(o); 
@@ -161,7 +161,7 @@
     	var jcontent = $(content);    	
     	if(jcontent.length) o.popup = jcontent;
     	else o.popup = $('<div>'+content+'</div>');     	
-    	o.popup.addClass(loading ? $.fn.popup.meta+'l' : $.fn.popup.meta).css({ height:$.ie6?"1%":"auto",position:'absolute',left:0, top:-99999, zIndex:60000000 + o.popups.length + (loading ? 2 : 1) }).appendTo("body")[0].popup = o;
+    	o.popup.addClass(loading ? $.fn.popup.meta+'l' : $.fn.popup.meta).css({ height:$.ie6?"1%":"auto",position:'absolute',left:0, top:-99999, zIndex:60000000 + o.popups.length + (loading ? 1 :2) }).appendTo("body")[0].popup = o;
     	o.popup.find(o.closeTrigger).click(function(){ $.fn.popup.close(this, o); return false; });
     	o.popup.find(o.okTrigger).click(function(){ o.ok(o); return false; });
     	o.popup.find(o.cancelTrigger).click(function(){ o.cancel(o); return false; });
@@ -174,10 +174,10 @@
     	return o.popup;
     }
     $.fn.popup.correct = function(o, popup) {
-    	if(o.loader && popup) { popup.css({ opacity : '' }); o.loader.remove(); o.loader = null; }
+    	//if(o.loader && popup) { popup.css({ opacity : '' }); o.loader.remove(); o.loader = null; }
     	if(!o.popupIsClosed) {
-	    	pos = $.fn.popup.position(o, o.popup); 
-	    	o.popup.stop(true).animate({ left: pos.left, top: pos.top }, 100);
+	    	o.p = $.fn.popup.position(o, o.popup); 
+	    	//o.popup.stop(true).animate({ left: o.p.left, top: o.p.top }, 100);
 	    	o.timeout = setTimeout(function() { $.fn.popup.correct(o); }, 110);
     	}
     }
