@@ -1,4 +1,13 @@
-(function($){  
+/*!
+ * Plugin jQuery Popup v2.0.1
+ * http://www.versatile-dev.com/jquery.popup
+ *
+ * Copyright 2010, Autrusseau Damien
+ * Licensed under the MIT license.
+ *
+ * Date: 
+ */
+ (function($){  
 	
 	$.fn.popup = function(o, type, extra) 
     {    	
@@ -270,7 +279,7 @@
 	    <div class="popup-content popup-overflow">%content</div>\
 	    <div class="popup-bottom"></div>\
 	</div>', { 
-		width: 'auto',
+		width: $.support.boxModel? '535px':'auto',
 		loading: { height: 200 }
 	});
 
