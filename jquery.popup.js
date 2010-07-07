@@ -165,12 +165,13 @@
     }    
 
     $.fn.popup.construct = function(o, loading) {    	
+    if($.browser.msie && o.width == 'auto') o.width = 'auto';
     	var content = o.template; 
     	for(opt in o) content=content.replace('%'+opt, o[opt]);
     	var jcontent = $(content);    	
     	if(jcontent.length) o.popup = jcontent;
     	else o.popup = $('<div>'+content+'</div>');     	
-    	o.popup.addClass(loading ? $.fn.popup.meta+'l' : $.fn.popup.meta).css({ height:$.ie6?"1%":"auto",position:'absolute',left:0, top:-99999, zIndex:60000000 + o.popups.length + (loading ? 1 :2) }).appendTo("body")[0].popup = o;
+    	o.popup.addClass(loading ? $.fn.popup.meta+'l' : $.fn.popup.meta).css({ height:$.browser.msie?"1%":"auto",position:'absolute',left:0, top:-99999, zIndex:60000000 + o.popups.length + (loading ? 1 :2) }).appendTo("body")[0].popup = o;
     	o.popup.find(o.closeTrigger).click(function(){ $.fn.popup.close(this, o); return false; });
     	o.popup.find(o.okTrigger).click(function(){ o.ok(o); return false; });
     	o.popup.find(o.cancelTrigger).click(function(){ o.cancel(o); return false; });
@@ -179,7 +180,8 @@
 	    	o.clickOut(o);
 	    	if(o.outClose) $.fn.popup.close(null, o);         	
 	    });
-    	o.p = $.fn.popup.position(o, o.popup, loading);    	
+    	o.p = $.fn.popup.position(o, o.popup, loading); 
+    		
     	return o.popup;
     }
     $.fn.popup.correct = function(o, popup) {
@@ -191,7 +193,7 @@
     	}
     }
     $.fn.popup.opened = function(o) {
-    	if(!o.position) o.timeout = setTimeout(function() { $.fn.popup.correct(o, o.popup); }, o.duration+1050);     	
+    	if(!o.position) o.timeout = setTimeout(function() { $.fn.popup.correct(o, o.popup); }, 10);     	
     	if(o.delay)setTimeout(function() { if(!o.popupIsClosed) $.fn.popup.close(null, o); }, o.delay);
     	o.afterOpen(o);
     }
@@ -228,9 +230,13 @@
 	        	if(!o.position.target || o.position.target == 'self' ) var target = o.self;
 			    else var target = $(o.position.target);
 			    if(!target.length) target = o.self;
+			    var visible = target.is(':visible');
 			    
-			    var nl = target.offset().left + o.position.x;
-	       		var nt = target.offset().top - (p_h+parseInt(popup.css('paddingTop'))+parseInt(popup.css('paddingBottom'))) + o.position.y;
+			    var tl = visible ? target.offset().left : 0;
+			    var tt = visible ? target.offset().top : 0;
+			    
+			    var nl = tl + o.position.x;
+	       		var nt = tt - (p_h+parseInt(popup.css('paddingTop'))+parseInt(popup.css('paddingBottom'))) + o.position.y;
 	        }
 	        else {
 	        	
@@ -279,7 +285,7 @@
 	    <div class="popup-content popup-overflow">%content</div>\
 	    <div class="popup-bottom"></div>\
 	</div>', { 
-		width: $.support.boxModel? '535px':'auto',
+		width: 'auto',
 		loading: { height: 200 }
 	});
 
