@@ -3,7 +3,7 @@
  * http://www.versatile-dev.com/jquery.popup
  *
  * Copyright 2010, Autrusseau Damien
- * Licensed under the MIT license.
+ * Not Licensed.
  *
  * Date: 
  */
@@ -15,13 +15,23 @@
     	if( typeof o == "string" ) {  
     		if( o == "close" ) return $.fn.popup.close(this);
     		else if( o == "cancel" || o == "ok") { var opt = $.fn.popup.retrieve(this); if(opt) opt[o](opt); return false; }
-    		else if( type ) { $.fn.popup.types[o] = type; $.fn.popup.extra[o] = extra; return this; }
+    		else if( type && typeof type == 'string') { 
+    			$.fn.popup.types[o] = type; $.fn.popup.extra[o] = extra; return this; 
+    		}
+    		else if (!type || typeof type == 'object') return this.popup($.extend(type, { type: o }));
     	}
     	//if( $.fn.popup.lock ) return this; $.fn.popup.lock = true;			
     	
     	o = $.fn.popup.define({			
 			overlay:		{ opacity:0.6, background: '#000' },
-			loading:		false,
+			loading: 		{ height: 200 },
+			css:			{},
+			url: 			this.attr('href'),
+			title: 			this.attr('title'),
+			width: 			'auto',		
+			height: 		$.browser.msie?'1%':'auto',
+			id:				false,			
+			classname:		false,
 			scroll:			false,
 			template:		'',
 			duration:		300,
@@ -29,9 +39,12 @@
 			type: 			'default',
 			dataType:		'html',
 			position:		false,
+			left:			false,
+			top:			false,
 			effect:			'fade', //'slide',
 			content: 		null,
-			marginBottom: 	10,	
+			outClose:		false,
+			selfClose:		false,
 			cancelTrigger:	'a.popup-cancel',
 			cancel:			function(o) { $.fn.popup.close(this, o); },			
 			okTrigger:		'a.popup-ok',
@@ -42,15 +55,15 @@
 			afterClose: 	function(o) {},
 			beforeOpen: 	function(o) { return true; },
 			afterOpen: 		function(o) {},
-			clickOut: 		function(o) {},
-			url: 			this.attr('href'),
-			title: 			this.attr('title')	
+			clickOut: 		function(o) {}		
+			
 		}, o, {			
 			self: 			this,
 			popup: 			null,			
 			minHeight:		$.support.boxModel?"1%":"auto"
-		});
-		o.popups = $($.fn.popup.metaclass);		
+		});	
+	
+		o.popups = $($.fn.popup.metaclass);	
 		$.fn.popup.preload(o);     
     	return this;
     };   
@@ -64,7 +77,7 @@
 		var type = o.type  ? o.type : defaults.type;
     	if($.fn.popup.types[type]) {
 			if(!o.template) o.template = $.fn.popup.types[type];
-			defaults = $.extend(defaults, $.fn.popup.extra[type]);			
+			defaults = $.extend(defaults, typeof $.fn.popup.extra[type] == 'function' ? $.fn.popup.extra[type](o) : $.fn.popup.extra[type] );			
 		}
     	else if(typeof o.type == 'string' && !o.template) o.template = o.type;
     	
@@ -165,13 +178,17 @@
     }    
 
     $.fn.popup.construct = function(o, loading) {    	
-    if($.browser.msie && o.width == 'auto') o.width = 'auto';
+   		if($.browser.msie && o.width == 'auto') o.width = 'auto';  		
+   		
+		o.css = $.extend(o.css, { width: o.width, height: o.height, position:'absolute',left:0, top:-99999 });
     	var content = o.template; 
-    	for(opt in o) content=content.replace('%'+opt, o[opt]);
+    	for(opt in o) content=content.replace('%'+opt+'%', o[opt]);
     	var jcontent = $(content);    	
     	if(jcontent.length) o.popup = jcontent;
-    	else o.popup = $('<div>'+content+'</div>');     	
-    	o.popup.addClass(loading ? $.fn.popup.meta+'l' : $.fn.popup.meta).css({ height:$.browser.msie?"1%":"auto",position:'absolute',left:0, top:-99999, zIndex:60000000 + o.popups.length + (loading ? 1 :2) }).appendTo("body")[0].popup = o;
+    	else o.popup = $('<div>'+content+'</div>');  
+    	if(o.id) o.popup.attr('id', o.id);  
+    	if(o.classname) o.popup.addClass(o.classname); 	
+    	o.popup.addClass(loading ? $.fn.popup.meta+'l' : $.fn.popup.meta).css(o.css).css({ zIndex:60000000 + o.popups.length + (loading ? 1 :2) }).appendTo("body")[0].popup = o;
     	o.popup.find(o.closeTrigger).click(function(){ $.fn.popup.close(this, o); return false; });
     	o.popup.find(o.okTrigger).click(function(){ o.ok(o); return false; });
     	o.popup.find(o.cancelTrigger).click(function(){ o.cancel(o); return false; });
@@ -214,38 +231,32 @@
     	var f_h = p_h + overflow.innerHeight() - overflow.height();
     	var dec = p_h - overflow.height();
         
-        if(f_h >= w_h - (o.marginBottom*2))
+        if(f_h >= w_h)
         {
-        	p_h = Math.max(10, w_h - (o.marginBottom*2) );
+        	p_h = Math.max(10, w_h );
         	f_h = p_h - dec;
         	overflow.css({ height: f_h });        	
         }
         else overflow.css(loading ? {} : { height: 'auto' });  
    	
         p_h = popup.height(); 
-        
+        var tl = 0;
+        var tt = 0;       	
         if(o.position) {
-       	
-	        if( typeof o.position == "object" ) {
-	        	if(!o.position.target || o.position.target == 'self' ) var target = o.self;
-			    else var target = $(o.position.target);
-			    if(!target.length) target = o.self;
-			    var visible = target.is(':visible');
-			    
-			    var tl = visible ? target.offset().left : 0;
-			    var tt = visible ? target.offset().top : 0;
-			    
-			    var nl = tl + o.position.x;
-	       		var nt = tt - (p_h+parseInt(popup.css('paddingTop'))+parseInt(popup.css('paddingBottom'))) + o.position.y;
-	        }
-	        else {
-	        	
-	        }
-        }
-        else {
-	        var nl = Math.max( o.marginBottom*2, (w_w-p_w) / 2 );
-	        var nt = Math.max( o.marginBottom*2, (w_h-p_h) / 2) + w_s;
-        }
+        	
+        	if(o.position == 'self' ) var target = o.self;
+		    else var target = $(o.position);
+		    if(!target.length) target = o.self;
+		    var visible = target.is(':visible');
+		    
+		    tl = visible ? target.offset().left : 0;
+		    tt = visible ? target.offset().top : 0;
+		}
+		if(o.position || o.left) var nl = tl + (o.left ? o.left : 0);
+		else var nl = Math.max( 0, (w_w-p_w) / 2 );
+       	if(o.position || o.top) var nt = tt - (p_h+parseInt(popup.css('paddingTop'))+parseInt(popup.css('paddingBottom'))) + (o.top ? o.top : 0);
+        else var nt = Math.max( 0, (w_h-p_h) / 2) + w_s;
+  
         return { left: nl, top: nt, height: p_h-dec, width: popup.width(), overflow: overflow };
     };
     $.fn.popup.retrieve = function(self, o) { 
@@ -270,7 +281,7 @@
     		clearTimeout(o.timeout); 
     		$.fn.popup.comeout(o, o.popup, function() {
     			o.popup.remove();
-    			if(!(o.popups.length - 1) && o.overlay) $.fn.popup.ovr.stop(true, true).animate({ opacity:0 }, 100, function(){ $.fn.popup.ovr.hide(); });
+    			if(!(o.popups.length - 1) && o.overlay) $.fn.popup.ovr.stop(true, true).animate({ opacity:0 }, o.duration-200, function(){ $.fn.popup.ovr.hide(); });
 				else if(o.overlay) $.fn.popup.ovr.show().css({ zIndex: 60000000 + o.popups.length - 1 });
 				o.afterClose(o);
     		})
@@ -280,13 +291,12 @@
     };
     
 	$.fn.popup('default', 
-	'<div id="%id" class="popup %classname" style="width:%width;">\
-		<div class="popup-title"><a class="popup-close">x</a><h2>%title</h2></div>\
-	    <div class="popup-content popup-overflow">%content</div>\
+	'<div class="popup %classname%">\
+		<div class="popup-title"><a class="popup-close">x</a><h2>%title%</h2></div>\
+	    <div class="popup-content popup-overflow">%content%</div>\
 	    <div class="popup-bottom"></div>\
 	</div>', { 
-		width: 'auto',
-		loading: { height: 200 }
+		
 	});
 
 })(jQuery);
